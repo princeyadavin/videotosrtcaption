@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRT Maker - Voice-Synced Subtitles</title>
+    
+    <!-- OPTIMIZED FONT LOADING -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Load Tailwind CSS (moved to head to allow classes to be processed before content renders) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Define Inter font and set base styling */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb; /* Very light gray background */
+        }
+        .full-page-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        /* Feature card styling */
+        .feature-card {
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(191, 219, 254, 0.5);
+            transition: transform 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        /* Custom styling for the handwritten name */
+        .handwritten-name {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2.25rem;
+            line-height: 1;
+        }
+        /* Custom CSS for Icon Animation */
+        .social-icon {
+            transition: transform 0.3s ease-in-out;
+            display: inline-block;
+        }
+        .social-icon:hover {
+            transform: rotate(12deg) scale(1.1);
+        }
+        /* Loader animation */
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1.5s linear infinite;
+            animation: spin 1.5s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="full-page-wrapper text-gray-800">
+
+    <!-- Header (Simple top navigation) -->
+    <header class="w-full bg-white shadow-sm p-4 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto flex justify-start items-center">
+            <span class="text-2xl font-bold text-indigo-700">SRT Maker</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 md:p-12 flex items-start justify-center">
+        
+        <div class="w-full max-w-6xl text-center">
+            
+            <!-- Hero/Feature Title Section -->
+            <div class="mb-12">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight mb-3">
+                    **Voice-Synced Subtitles: Automatic and Accurate**
+                </h1>
+                <p class="text-xl text-gray-600">
+                    The AI now calculates the exact start and end time for every caption to ensure perfect synchronization.
+                </p>
+            </div>
+
+            <!-- Conversion App Area (Integrated) -->
+            <div id="converter-app" class="w-full max-w-2xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-8 space-y-6 mb-16 border border-indigo-100">
+                <header class="text-center">
+                    <h2 class="text-2xl font-bold text-gray-900">Video to SRT Subtitle Converter</h2>
+                    <p class="mt-1 text-gray-500">Transcribe and generate multilingual, *time-aligned* SRT files.</p>
+                </header>
+
+                <!-- Message Box Container -->
+                <div id="message-container" class="space-y-3"></div>
+
+                <!-- Conversion Area -->
+                <div class="border-t pt-6 space-y-6">
+                    <div class="relative">
+                        <label for="video-file" class="block text-sm font-medium text-gray-700 mb-2 text-left">Select Video File</label>
+                        <input type="file" id="video-file" accept="video/*" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 p-2.5 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        <p class="mt-1 text-xs text-gray-500 text-left">Note: For stability, video size is ideally limited to 20MB or less.</p>
+                    </div>
+
+                    <!-- IMPORTANT: Duration Input REMOVED as timing is now automatic -->
+                    
+                    <!-- Language, Case, and Words Per Caption Inputs -->
+                    <div class="space-y-4">
+                        <div class="w-full">
+                            <label for="language-input" class="block text-sm font-medium text-gray-700 mb-2 text-left">Target Language/Format (e.g., Hinglish, Hindi, English, Spanish, French)</label>
+                            <input type="text" id="language-input" value="Hinglish" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 p-2.5 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <p class="mt-1 text-xs text-gray-500 text-gray-500/70 text-left">
+                                **Hinglish Fix:** Still using a specialized prompt for better code-mixed transcription!
+                            </p>
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <div class="w-1/2">
+                                <label for="case-input" class="block text-sm font-medium text-gray-700 mb-2 text-left">Subtitle Case</label>
+                                <select id="case-input" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 p-2.5 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="normal">Normal (Sentence Case)</option>
+                                    <option value="uppercase">Uppercase (CAPITAL)</option>
+                                    <option value="lowercase">Lowercase (small)</option>
+                                </select>
+                            </div>
+
+                            <div class="w-1/2">
+                                <label for="words-per-caption" class="block text-sm font-medium text-gray-700 mb-2 text-left">Words per Caption</label>
+                                <input type="number" id="words-per-caption" value="7" min="1" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 p-2.5 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <p class="mt-1 text-xs text-gray-500 text-left">
+                                    The AI uses this to chunk text into readable subtitles.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="convert-btn"
+                        class="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-lg shadow-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="subtitles" class="w-5 h-5 mr-2"></i>
+                        <span id="button-text">Transcribe and Generate Synced SRT</span>
+                        <div id="loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 ml-3 hidden"></div>
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Result Area -->
+            <div id="result-area" class="hidden mt-12 p-6 md:p-8 w-full max-w-4xl mx-auto bg-white shadow-xl rounded-xl space-y-4 border border-green-100">
+                <h2 class="text-2xl font-semibold text-gray-900">SRT Generation Successful!</h2>
+                
+                <!-- Gemini Enhancement Options (4-button grid) -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+                    
+                    <!-- 1. Refiner Feature -->
+                    <button id="refine-btn"
+                        class="col-span-1 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="sparkles" class="w-4 h-4 mr-1.5"></i>
+                        <span id="refine-button-text">Refine</span>
+                        <div id="refine-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-4 w-4 ml-2 hidden"></div>
+                    </button>
+
+                    <!-- 2. Translator Feature -->
+                    <div class="col-span-1 flex space-x-1">
+                        <select id="translation-language" title="Translation Target Language" class="w-1/2 p-2 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Spanish">Español</option>
+                            <option value="French">Français</option>
+                            <option value="German">Deutsch</option>
+                            <option value="Mandarin">普通话</option>
+                            <option value="Portuguese">Português</option>
+                            <option value="Hindi">हिन्दी</option>
+                        </select>
+                        <button id="translate-btn"
+                            class="w-1/2 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="sparkles" class="w-4 h-4 mr-1.5"></i>
+                            <span id="translate-button-text">Translate</span>
+                            <div id="translate-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-4 w-4 ml-2 hidden"></div>
+                        </button>
+                    </div>
+
+                    <!-- 3. New: Summarize Content -->
+                    <button id="summarize-btn"
+                        class="col-span-1 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="sparkles" class="w-4 h-4 mr-1.5"></i>
+                        <span id="summarize-button-text">Summarize Content</span>
+                        <div id="summarize-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-4 w-4 ml-2 hidden"></div>
+                    </button>
+                    
+                    <!-- 4. New: Generate Social Hooks -->
+                    <button id="hooks-btn"
+                        class="col-span-1 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
+                        <i data-lucide="sparkles" class="w-4 h-4 mr-1.5"></i>
+                        <span id="hooks-button-text">Generate Social Hooks</span>
+                        <div id="hooks-loader" class="loader ease-linear rounded-full border-4 border-t-4 border-gray-100 h-4 w-4 ml-2 hidden"></div>
+                    </button>
+                    
+                </div>
+                
+                <!-- SRT Output Area (Primary) -->
+                <p class="text-sm text-green-700 font-medium p-3 bg-green-100 rounded-lg border border-green-200">
+                    <span class="font-bold">SYNC MATCHED:</span> The SRT timestamps are now generated directly by the AI based on the audio, ensuring a high degree of voice synchronization.
+                </p>
+                <h3 class="text-xl font-semibold text-gray-800 text-left">Generated SRT File Preview</h3>
+                <textarea id="srt-preview" rows="10" readonly class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"></textarea>
+                <button id="download-btn" class="w-full px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out">
+                    Download SRT File
+                </button>
+
+                <!-- New: Secondary Text Output Area (For Summary/Hooks) -->
+                <div id="auxiliary-output-area" class="hidden space-y-2 pt-4 mt-4 border-t border-gray-200">
+                    <h3 id="auxiliary-title" class="text-xl font-semibold text-gray-800 text-left">Secondary Content Output</h3>
+                    <textarea id="auxiliary-text-preview" rows="5" readonly class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-sm"></textarea>
+                    <button id="copy-auxiliary-btn" class="w-full px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-gray-500 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition duration-150 ease-in-out">
+                        Copy Generated Text
+                    </button>
+                </div>
+            </div>
+
+
+            <!-- Feature Cards Grid (Moved to bottom) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 md:p-8 mt-16">
+                
+                <!-- Feature 1: AI-Powered Accuracy -->
+                <div class="feature-card p-8 text-left bg-blue-50/70">
+                    <div class="text-indigo-600 bg-indigo-100 p-4 inline-block rounded-2xl mb-4 shadow-sm">
+                        <i data-lucide="brain-circuit" class="w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">AI-Powered Accuracy</h2>
+                    <p class="text-gray-600">
+                        Our advanced AI transcribes your audio with unparalleled precision, reducing the need for manual edits and speeding up your workflow significantly.
+                    </p>
+                </div>
+
+                <!-- Feature 2: Multilingual Support -->
+                <div class="feature-card p-8 text-left bg-blue-50/70">
+                    <div class="text-green-600 bg-green-100 p-4 inline-block rounded-2xl mb-4 shadow-sm">
+                        <i data-lucide="languages" class="w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">Multilingual Support</h2>
+                    <p class="text-gray-600">
+                        Convert videos in **any language**, including Hinglish, Spanish, French, and dozens more, making your content globally accessible instantly.
+                    </p>
+                </div>
+                
+                <!-- Feature 3: Fast & Efficient Workflow -->
+                <div class="feature-card p-8 text-left bg-blue-50/70">
+                    <div class="text-yellow-600 bg-yellow-100 p-4 inline-block rounded-2xl mb-4 shadow-sm">
+                        <i data-lucide="speedometer" class="w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold mb-3 text-gray-800">Fast & Efficient Workflow</h2>
+                    <p class="text-gray-600">
+                        Quickly upload, convert, and download your ready-to-use SRT files in minutes, not hours. Seamless integration into your production pipeline.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+    
+    <!-- Retained Stylish Footer -->
+    <footer class="w-full bg-white border-t border-gray-200 p-8">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
+            
+            <!-- Column 1: App Info -->
+            <div class="text-center md:text-left">
+                <span class="text-xl font-bold text-indigo-700">SRT Maker</span>
+                <p class="mt-2 text-gray-500">&copy; 2025 SRT Maker. All rights reserved.</p>
+            </div>
+
+            <!-- Column 2: Created By (Styled) -->
+            <div class="text-center flex flex-col items-center justify-center">
+                <p class="text-gray-600 mb-1">Created By</p>
+                <span class="handwritten-name font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-pink-500 tracking-wide transition duration-300 hover:from-pink-500 hover:to-indigo-500">
+                    Prince Yadav
+                </span>
+            </div>
+
+            <!-- Column 3: Social Links (Updated with colors and animation class) -->
+            <div class="flex justify-center md:justify-end space-x-6 items-center">
+                <!-- Instagram (Pink/Purple) -->
+                <a href="https://insta.openinapp.co/3v25q" target="_blank" rel="noopener noreferrer" class="social-icon text-pink-600 hover:text-purple-700" aria-label="Instagram">
+                    <i data-lucide="instagram" class="w-6 h-6"></i>
+                </a>
+                <!-- YouTube (Red) -->
+                <a href="https://yt.openinapp.co/kl5oj" target="_blank" rel="noopener noreferrer" class="social-icon text-red-600 hover:text-red-700" aria-label="YouTube">
+                    <i data-lucide="youtube" class="w-6 h-6"></i>
+                </a>
+                <!-- Website (Blue) -->
+                <a href="https://princeyadav.framer.website/" target="_blank" rel="noopener noreferrer" class="social-icon text-blue-600 hover:text-blue-700" aria-label="Website">
+                    <i data-lucide="globe" class="w-6 h-6"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+
+    <!-- OPTIMIZED SCRIPT LOADING (Moved to end of body for faster perceived performance) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=";
+        const apiKey = ""; // API key is handled by the environment
+
+        // Elements for Main Conversion
+        const fileInput = document.getElementById('video-file');
+        const languageInput = document.getElementById('language-input');
+        const caseInput = document.getElementById('case-input');
+        const wordsPerCaptionInput = document.getElementById('words-per-caption');
+        const convertBtn = document.getElementById('convert-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const srtPreview = document.getElementById('srt-preview');
+        const resultArea = document.getElementById('result-area');
+        const loader = document.getElementById('loader');
+        const buttonText = document.getElementById('button-text');
+        const messageContainer = document.getElementById('message-container');
+        
+        // Elements for Gemini Features
+        const refineBtn = document.getElementById('refine-btn');
+        const refineLoader = document.getElementById('refine-loader');
+        const refineButtonText = document.getElementById('refine-button-text');
+        const translateBtn = document.getElementById('translate-btn');
+        const translateLoader = document.getElementById('translate-loader');
+        const translateButtonText = document.getElementById('translate-button-text');
+        const translationLanguageSelect = document.getElementById('translation-language');
+        const summarizeBtn = document.getElementById('summarize-btn');
+        const summarizeLoader = document.getElementById('summarize-loader');
+        const summarizeButtonText = document.getElementById('summarize-button-text');
+        const hooksBtn = document.getElementById('hooks-btn');
+        const hooksLoader = document.getElementById('hooks-loader');
+        const hooksButtonText = document.getElementById('hooks-button-text');
+
+        // Elements for Auxiliary Output
+        const auxiliaryOutputArea = document.getElementById('auxiliary-output-area');
+        const auxiliaryTitle = document.getElementById('auxiliary-title');
+        const auxiliaryTextPreview = document.getElementById('auxiliary-text-preview');
+        const copyAuxiliaryBtn = document.getElementById('copy-auxiliary-btn');
+
+
+        let generatedSRTContent = '';
+        let currentTranscriptText = ''; // Stores the raw text (transcribed or refined)
+        let currentSegments = []; // Stores the structured, time-stamped segments
+
+        // --- JSON Schema for Synchronous Output ---
+        const srtSchema = {
+            type: "ARRAY",
+            description: "A chronological list of speech segments extracted from the video's audio, including precise start and end times in milliseconds.",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    "start_time_ms": { 
+                        "type": "INTEGER",
+                        "description": "Start time of the segment in milliseconds (integer)."
+                    },
+                    "end_time_ms": { 
+                        "type": "INTEGER",
+                        "description": "End time of the segment in milliseconds (integer)."
+                    },
+                    "text": { 
+                        "type": "STRING",
+                        "description": "The transcribed speech text for this segment."
+                    }
+                },
+                "propertyOrdering": ["start_time_ms", "end_time_ms", "text"]
+            }
+        };
+
+
+        // --- Utility Functions ---
+
+        /** Creates a temporary message box in the UI. */
+        function showMessage(type, text) {
+            const colors = {
+                success: { bg: 'bg-green-100', text: 'text-green-800' },
+                error: { bg: 'bg-red-100', text: 'text-red-800' },
+                info: { bg: 'bg-blue-100', text: 'text-blue-800' }
+            };
+            const msg = document.createElement('div');
+            msg.className = `p-3 rounded-lg ${colors[type].bg} ${colors[type].text} text-sm transition-opacity duration-300 ease-in-out`;
+            msg.textContent = text;
+
+            messageContainer.prepend(msg);
+            setTimeout(() => {
+                msg.classList.add('opacity-0');
+                setTimeout(() => msg.remove(), 300);
+            }, 5000);
+        }
+
+        /** Converts a File object to a Base64 string. */
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]); // Only need the data part
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /** Converts milliseconds to SRT time format (HH:MM:SS,ms). */
+        function toSRTTime(ms) {
+            // Ensure ms is a non-negative integer
+            ms = Math.max(0, Math.round(ms));
+
+            const hours = Math.floor(ms / 3600000);
+            const minutes = Math.floor((ms % 3600000) / 60000);
+            const seconds = Math.floor((ms % 60000) / 1000);
+            const milliseconds = ms % 1000;
+
+            const pad = (num) => String(num).padStart(2, '0');
+            const padMs = (num) => String(milliseconds).padStart(3, '0');
+
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)},${padMs(milliseconds)}`;
+        }
+        
+        /** Applies the selected case transformation to a text chunk. */
+        function applyCaseTransformation(text, caseType) {
+            if (!text) return "";
+            switch (caseType) {
+                case 'uppercase':
+                    return text.toUpperCase();
+                case 'lowercase':
+                    return text.toLowerCase();
+                case 'normal':
+                default:
+                    // Simple Sentence Case: lowercase, then capitalize the first letter
+                    if (text.length === 0) return text;
+                    const lowerText = text.toLowerCase(); 
+                    return lowerText.charAt(0).toUpperCase() + lowerText.slice(1);
+            }
+        }
+
+        /** Converts a structured array of segments (with times) into an SRT string. */
+        function convertStructuredJsonToSRT(segments, caseType) {
+            let srtOutput = '';
+            let subtitleIndex = 1;
+
+            if (!Array.isArray(segments)) return '';
+
+            for (const segment of segments) {
+                // Ensure required properties exist and times are valid
+                if (typeof segment.start_time_ms !== 'number' || typeof segment.end_time_ms !== 'number' || !segment.text) {
+                    console.warn("Skipping invalid segment:", segment);
+                    continue;
+                }
+                
+                const transformedText = applyCaseTransformation(segment.text.trim(), caseType);
+
+                // Build SRT block
+                srtOutput += `${subtitleIndex}\n`;
+                srtOutput += `${toSRTTime(segment.start_time_ms)} --> ${toSRTTime(segment.end_time_ms)}\n`;
+                srtOutput += `${transformedText}\n\n`;
+
+                subtitleIndex++;
+            }
+
+            return srtOutput.trim();
+        }
+
+        /** Handles button states for loading/disabled. */
+        function setProcessingState(isProcessing, btn, textElement, loaderElement, defaultText) {
+            btn.disabled = isProcessing;
+            if (isProcessing) {
+                loaderElement.classList.remove('hidden');
+                textElement.textContent = 'Processing...';
+            } else {
+                loaderElement.classList.add('hidden');
+                textElement.textContent = defaultText;
+            }
+            // Control auxiliary buttons based on main state
+            const allAuxButtons = [refineBtn, translateBtn, summarizeBtn, hooksBtn];
+            for (const auxBtn of allAuxButtons) {
+                // If main process is running, disable all aux buttons. Otherwise, enable if transcript exists.
+                if (btn === convertBtn) {
+                    auxBtn.disabled = isProcessing;
+                } else if (auxBtn !== btn) {
+                    // Aux buttons should be enabled only if the main segments are available
+                    auxBtn.disabled = isProcessing || currentSegments.length === 0;
+                }
+            }
+            // Download button state
+            downloadBtn.disabled = isProcessing;
+            copyAuxiliaryBtn.disabled = isProcessing;
+        }
+        
+        // Convenience wrappers for setting states
+        function setMainProcessingState(isProcessing) {
+            setProcessingState(isProcessing, convertBtn, buttonText, loader, 'Transcribe and Generate Synced SRT');
+            fileInput.disabled = isProcessing;
+            languageInput.disabled = isProcessing;
+            caseInput.disabled = isProcessing;
+            wordsPerCaptionInput.disabled = isProcessing;
+        }
+        function setRefineState(isProcessing) {
+            setProcessingState(isProcessing, refineBtn, refineButtonText, refineLoader, 'Refine');
+        }
+        function setTranslateState(isProcessing) {
+            setProcessingState(isProcessing, translateBtn, translateButtonText, translateLoader, 'Translate');
+        }
+        function setSummarizeState(isProcessing) {
+            setProcessingState(isProcessing, summarizeBtn, summarizeButtonText, summarizeLoader, 'Summarize Content');
+        }
+        function setHooksState(isProcessing) {
+            setProcessingState(isProcessing, hooksBtn, hooksButtonText, hooksLoader, 'Generate Social Hooks');
+        }
+
+
+        /** Retries API call with exponential backoff on rate limits or server errors. */
+        async function fetchWithExponentialBackoff(apiUrl, payload, maxRetries = 5, delay = 1000) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.status === 429 || response.status >= 500) {
+                        if (i < maxRetries - 1) {
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; 
+                            continue;
+                        }
+                    }
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`API Request failed with status ${response.status}: ${errorText}`);
+                    }
+
+                    return response.json();
+                } catch (error) {
+                    console.error('Fetch attempt failed:', error);
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            throw new Error('Maximum retries reached.');
+        }
+
+        // --- Main Conversion Handler (Now uses Structured Output for Timing) ---
+
+        async function handleConvert() {
+            const file = fileInput.files[0];
+            const targetLanguage = languageInput.value.trim() || 'English';
+            const caseType = caseInput.value;
+            let wordsPerLine = parseInt(wordsPerCaptionInput.value, 10);
+
+            if (!file) {
+                showMessage('error', 'Please select a video file first.');
+                return;
+            }
+            if (isNaN(wordsPerLine) || wordsPerLine < 1) {
+                wordsPerLine = 7;
+                wordsPerCaptionInput.value = 7; 
+                showMessage('info', 'Invalid word count. Defaulting to 7 words per caption.');
+            }
+
+            if (file.size > 25 * 1024 * 1024) { 
+                showMessage('info', 'File is very large. Transcription of long videos may fail or be truncated by the API.');
+            }
+
+            setMainProcessingState(true);
+            resultArea.classList.add('hidden');
+            auxiliaryOutputArea.classList.add('hidden');
+            generatedSRTContent = '';
+            currentTranscriptText = '';
+            currentSegments = [];
+
+            try {
+                const base64Data = await fileToBase64(file);
+
+                // --- PROMPT LOGIC FOR HINGLISH/CODE-MIXED LANGUAGES ---
+                let promptInstruction = `Transcribe the audio track of this video file. Chunk the transcription into segments, each containing approximately ${wordsPerLine} words, corresponding to the natural pauses in speech. For each segment, calculate the precise 'start_time_ms' and 'end_time_ms' in milliseconds based on the audio content. The transcription must be provided in ${targetLanguage}.`;
+                let systemInstructionText = `You are an expert audio transcription service focused on generating accurate, time-aligned JSON transcripts. Strictly adhere to the requested JSON schema.`;
+                
+                if (targetLanguage.toLowerCase().includes('hinglish')) {
+                    // Specific instructions for code-mixed Romanized language
+                    promptInstruction = `Transcribe the audio track of this video file. The speech is code-mixed (Romanized Hindi and English). Chunk the transcription into segments, each containing approximately ${wordsPerLine} words, corresponding to the natural pauses in speech. Use Roman script (e.g., 'main chala gaya'). For each segment, calculate the precise 'start_time_ms' and 'end_time_ms' in milliseconds based on the audio content.`;
+                }
+                // --- END PROMPT LOGIC ---
+
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: promptInstruction },
+                                {
+                                    inlineData: {
+                                        mimeType: file.type,
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    systemInstruction: {
+                        parts: [{ text: systemInstructionText }]
+                    },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: srtSchema
+                    }
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const jsonText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!jsonText) {
+                     throw new Error("API returned an empty response. Check if the video audio is clear.");
+                }
+
+                const segments = JSON.parse(jsonText);
+
+                if (!Array.isArray(segments) || segments.length === 0) {
+                    throw new Error("AI could not generate a valid, time-stamped JSON transcript. Please ensure the video has clear speech.");
+                }
+                
+                // Save the structured segments and build the continuous text transcript
+                currentSegments = segments;
+                currentTranscriptText = segments.map(s => s.text).join(' ').trim();
+
+
+                // Convert structured segments to final SRT
+                generatedSRTContent = convertStructuredJsonToSRT(currentSegments, caseType);
+
+                // Display results
+                srtPreview.value = generatedSRTContent;
+                resultArea.classList.remove('hidden');
+                showMessage('success', `Synchronous transcription and SRT generation complete! Timing is based on audio analysis.`);
+
+            } catch (error) {
+                console.error("Conversion Error:", error);
+                showMessage('error', `Conversion failed. Details: ${error.message}.`);
+                resultArea.classList.add('hidden');
+            } finally {
+                setMainProcessingState(false);
+            }
+        }
+
+
+        // --- Auxiliary Feature Handlers (Updated to use the full transcript) ---
+        
+        // This helper rebuilds the segments/SRT after a text transformation (Refine/Translate)
+        async function regenerateSegments(newText, transformType) {
+            setProcessingState(true, this, this.buttonText, this.loader, 'Re-Syncing...'); // Generic state for all aux
+
+            const caseType = caseInput.value;
+            let wordsPerLine = parseInt(wordsPerCaptionInput.value, 10);
+            
+            try {
+                // We ask the AI to take the new text and re-time it against the ORIGINAL video file, 
+                // using the new chunking size (wordsPerLine)
+                const file = fileInput.files[0];
+                if (!file) throw new Error("Video file not found for re-timing.");
+                const base64Data = await fileToBase64(file);
+
+                const promptInstruction = `Take the following new text, re-chunk it into segments of approximately ${wordsPerLine} words, and re-align each new segment against the audio track of the provided video file. For each new segment, calculate the precise 'start_time_ms' and 'end_time_ms' in milliseconds. Return the result strictly in the requested JSON format. New Text: "${newText}"`;
+                
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: promptInstruction },
+                                {
+                                    inlineData: {
+                                        mimeType: file.type,
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: srtSchema
+                    }
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const jsonText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (!jsonText) throw new Error("AI returned empty result during re-timing.");
+
+                const newSegments = JSON.parse(jsonText);
+
+                if (!Array.isArray(newSegments) || newSegments.length === 0) {
+                    throw new Error("AI could not re-time the segments. Please try refining the text manually.");
+                }
+                
+                currentSegments = newSegments;
+                // Rebuild the continuous transcript from the new segments
+                currentTranscriptText = newSegments.map(s => s.text).join(' ').trim();
+                
+                // Convert and display
+                generatedSRTContent = convertStructuredJsonToSRT(currentSegments, caseType);
+                srtPreview.value = generatedSRTContent;
+                showMessage('success', `✨ Subtitles ${transformType} and successfully **Re-Synced**! (SRT updated)`);
+
+            } catch(error) {
+                console.error(`Regeneration Error (${transformType}):`, error);
+                showMessage('error', `Re-timing failed after ${transformType}. Details: ${error.message}`);
+                // Re-enable the specific button that was pressed
+            }
+        }
+
+
+        // --- ✨ Gemini Feature 1: Subtitle Refiner ---
+        async function handleRefine() {
+            if (currentSegments.length === 0) {
+                showMessage('error', 'Please convert a video first before refining.');
+                return;
+            }
+
+            setRefineState(true);
+            auxiliaryOutputArea.classList.add('hidden');
+
+            try {
+                const userPrompt = `Refine the following raw text transcript for grammar, punctuation, and fluency. Ensure the output flows naturally as polished subtitles. Keep the refined text in the same language as the original. Provide only the clean, refined, single block of text, with no extra commentary or introduction. Raw Transcript: "${currentTranscriptText}"`;
+                const systemInstructionText = `You are a professional subtitle editor and copywriter. Your only job is to polish raw transcript text into highly readable, fluent, and grammatically correct subtitle text. Output ONLY the refined text.`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstructionText }] },
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const refinedText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!refinedText || refinedText.trim() === "") {
+                    throw new Error("AI returned an empty or invalid refinement result.");
+                }
+
+                // Use the refined text to regenerate the time segments
+                await regenerateSegments(refinedText, 'Refinement');
+
+            } catch (error) {
+                console.error("Refinement Error:", error);
+                showMessage('error', `Refinement failed. Details: ${error.message}.`);
+            } finally {
+                setRefineState(false);
+            }
+        }
+
+
+        // --- ✨ Gemini Feature 2: AI Translator ---
+        async function handleTranslate() {
+            if (currentSegments.length === 0) {
+                showMessage('error', 'Please convert a video first before translating.');
+                return;
+            }
+
+            setTranslateState(true);
+            auxiliaryOutputArea.classList.add('hidden');
+
+            const targetLang = translationLanguageSelect.value;
+            
+            try {
+                const userPrompt = `Translate the following text transcript into ${targetLang}. Provide only the pure translated text, with no extra commentary or introduction. Text to Translate: "${currentTranscriptText}"`;
+                const systemInstructionText = `You are an expert translator. Translate the given text into ${targetLang}.`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstructionText }] },
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const translatedText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!translatedText || translatedText.trim() === "") {
+                    throw new Error("AI returned an empty or invalid translation result.");
+                }
+
+                // Use the translated text to regenerate the time segments
+                await regenerateSegments(translatedText, 'Translation');
+
+            } catch (error) {
+                console.error("Translation Error:", error);
+                showMessage('error', `Translation failed. Details: ${error.message}`);
+            } finally {
+                setTranslateState(false);
+            }
+        }
+
+
+        // --- ✨ Gemini Feature 3: Summarize Content ---
+        async function handleSummarize() {
+            if (currentSegments.length === 0) {
+                showMessage('error', 'Please convert a video first.');
+                return;
+            }
+
+            setSummarizeState(true);
+
+            try {
+                const userPrompt = `Generate a single, concise, and SEO-friendly paragraph summary (max 150 words) of the following video transcript. The summary should be suitable for a video description field. Transcript: "${currentTranscriptText}"`;
+                const systemInstructionText = `You are a professional copywriter specializing in short-form, informative, and engaging content summaries for digital media.`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstructionText }] },
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const summaryText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!summaryText || summaryText.trim() === "") {
+                    throw new Error("AI returned an empty summary.");
+                }
+
+                // Display result in auxiliary area
+                auxiliaryTitle.textContent = '✨ AI-Generated Video Summary';
+                auxiliaryTextPreview.value = summaryText.trim();
+                auxiliaryOutputArea.classList.remove('hidden');
+                showMessage('success', '✨ Video summary generated successfully.');
+
+            } catch (error) {
+                console.error("Summarize Error:", error);
+                showMessage('error', `Summary generation failed. Details: ${error.message}`);
+            } finally {
+                setSummarizeState(false);
+            }
+        }
+
+
+        // --- ✨ Gemini Feature 4: Generate Social Hooks ---
+        async function handleGenerateHooks() {
+            if (currentSegments.length === 0) {
+                showMessage('error', 'Please convert a video first.');
+                return;
+            }
+
+            setHooksState(true);
+
+            try {
+                const userPrompt = `Generate 3 distinct, short, and highly engaging social media hooks or captions to promote the following video. Format the output with each hook on a new line, separated by a double newline. Transcript: "${currentTranscriptText}"`;
+                const systemInstructionText = `You are an expert social media marketer and hook creator. Generate engaging content designed to maximize click-throughs and views.`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemInstructionText }] },
+                };
+
+                const jsonResponse = await fetchWithExponentialBackoff(API_URL + apiKey, payload);
+                const hooksText = jsonResponse.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!hooksText || hooksText.trim() === "") {
+                    throw new Error("AI returned no social hooks.");
+                }
+
+                // Display result in auxiliary area
+                auxiliaryTitle.textContent = '✨ AI-Generated Social Media Hooks';
+                auxiliaryTextPreview.value = hooksText.trim();
+                auxiliaryOutputArea.classList.remove('hidden');
+                showMessage('success', '✨ Social media hooks generated successfully.');
+
+            } catch (error) {
+                console.error("Hooks Error:", error);
+                showMessage('error', `Social hook generation failed. Details: ${error.message}`);
+            } finally {
+                setHooksState(false);
+            }
+        }
+
+
+        // --- Download & Copy Logic ---
+
+        function handleDownload() {
+            if (!generatedSRTContent) {
+                showMessage('error', 'No SRT content generated to download.');
+                return;
+            }
+
+            const fileName = fileInput.files[0] ? fileInput.files[0].name.replace(/\.[^/.]+$/, "") + '.srt' : 'transcript.srt';
+
+            const blob = new Blob([generatedSRTContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        function handleCopyAuxiliary() {
+            if (auxiliaryTextPreview.value) {
+                // Use document.execCommand('copy') for better compatibility in iFrames
+                const textarea = auxiliaryTextPreview;
+                textarea.select();
+                document.execCommand('copy');
+                showMessage('success', 'Content copied to clipboard!');
+            } else {
+                showMessage('error', 'No content to copy.');
+            }
+        }
+
+
+        // --- Event Listeners ---
+        convertBtn.addEventListener('click', handleConvert);
+        downloadBtn.addEventListener('click', handleDownload);
+        refineBtn.addEventListener('click', handleRefine);
+        translateBtn.addEventListener('click', handleTranslate);
+        summarizeBtn.addEventListener('click', handleSummarize);
+        hooksBtn.addEventListener('click', handleGenerateHooks);
+        copyAuxiliaryBtn.addEventListener('click', handleCopyAuxiliary);
+
+        // Initial setup for buttons and icons
+        setMainProcessingState(false);
+        // Set all secondary buttons to disabled until transcription occurs
+        refineBtn.disabled = true;
+        translateBtn.disabled = true;
+        summarizeBtn.disabled = true;
+        hooksBtn.disabled = true;
+        
+        lucide.createIcons();
+    </script>
+</body>
+</html>
